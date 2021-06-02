@@ -31,7 +31,7 @@ class Label:
 
 class Button(Label):
     def __init__(self, x, y, width, height, text, action=None,
-                 colors=((8, 72, 135), (245, 138, 7), (249, 171, 85)),
+                 colors=((160, 26, 88), (114, 60, 112), (69, 94, 137)),
                  anchor_x='center', anchor_y='center', **kwargs):
 
         if anchor_x == 'left':
@@ -39,14 +39,14 @@ class Button(Label):
         elif anchor_x == 'center':
             x -= width // 2
         elif anchor_x == 'right':
-            x += width // 2
+            x += width
 
         if anchor_y == 'top':
             pass
-        elif anchor_x == 'center':
-            y -= height // 2
-        elif anchor_x == 'bottom':
+        elif anchor_y == 'center':
             y += height // 2
+        elif anchor_y == 'bottom':
+            y -= height
 
         super().__init__(x, y, text, width, height, **kwargs)
         self.colors = colors

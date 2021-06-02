@@ -102,18 +102,19 @@ class Game:
 
         self.ui_elements = []
 
-        def set_diagonally_btn_txt(button):
-            global DIAGONALLY
-            DIAGONALLY = not DIAGONALLY
-            button.text = f'Diagonal connections: {DIAGONALLY}'
+        # UI
+        UI_FONT_COLOR = (255, 255, 255)
+
+        def start_search(button):
+            self.find_path()
         self.ui_elements.append(UI.Button(
             UI_START_X + UI_WIDTH // 2,
             25,
-            300,
+            250,
             50,
-            f'Diagonal connections: {DIAGONALLY}',
-            action=set_diagonally_btn_txt,
-            font_color=(247, 37, 133),
+            f'Start search (SPACE)',
+            action=start_search,
+            font_color=(UI_FONT_COLOR),
             anchor_x='center',
             anchor_y='top'
         ))
@@ -123,28 +124,60 @@ class Game:
         self.ui_elements.append(UI.Button(
             UI_START_X + UI_WIDTH // 2,
             100,
-            100,
+            250,
             50,
-            f'Reset (R)',
+            f'Reset search (R)',
             action=reset_search,
-            font_color=(247, 37, 133),
+            font_color=(UI_FONT_COLOR),
             anchor_x='center',
             anchor_y='top'
         ))
 
-        def start_search(button):
-            self.find_path()
-
+        def change_pause_time(button):
+            global PAUSE_TIME
+            PAUSE_TIME += 0.005
+            PAUSE_TIME %= 0.100
+            button.text = f'Pause time: {round(PAUSE_TIME, 4)}s'
         self.ui_elements.append(UI.Button(
             UI_START_X + UI_WIDTH // 2,
-            175,
-            250,
+            HEIGHT - 175,
+            300,
             50,
-            f'Start search (SPACE)',
-            action=start_search,
-            font_color=(247, 37, 133),
+            f'Pause time: {PAUSE_TIME}s',
+            action=change_pause_time,
+            font_color=(UI_FONT_COLOR),
             anchor_x='center',
-            anchor_y='top'
+            anchor_y='bottom'
+        ))
+
+        def set_diagonally_btn_txt(button):
+            global DIAGONALLY
+            DIAGONALLY = not DIAGONALLY
+            button.text = f'Diagonal connections: {DIAGONALLY}'
+        self.ui_elements.append(UI.Button(
+            UI_START_X + UI_WIDTH // 2,
+            HEIGHT - 100,
+            300,
+            50,
+            f'Diagonal connections: {DIAGONALLY}',
+            action=set_diagonally_btn_txt,
+            font_color=(UI_FONT_COLOR),
+            anchor_x='center',
+            anchor_y='bottom'
+        ))
+
+        def clear_board(button):
+            self.generate()
+        self.ui_elements.append(UI.Button(
+            UI_START_X + UI_WIDTH // 2,
+            HEIGHT - 25,
+            200,
+            50,
+            f'Clear the board',
+            action=clear_board,
+            font_color=(UI_FONT_COLOR),
+            anchor_x='center',
+            anchor_y='bottom'
         ))
 
     def draw(self, surface):
@@ -164,6 +197,7 @@ class Game:
             el.update(keys, mouse)
 
     def generate(self):
+        self.tiles = []
         for x in range(self.size):
             line = []
             for y in range(self.size):
@@ -269,4 +303,5 @@ def main():
 
 if __name__ == "__main__":
     win = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Visual Path V0.1")
     main()
