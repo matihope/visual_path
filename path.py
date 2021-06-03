@@ -329,7 +329,7 @@ class Game:
                     if node_x + x in range(self.size):
                         if node_y + y in range(self.size):
                             new_node = self.tiles[node_x + x][node_y + y]
-                            if not visited.get(new_node):
+                            if not visited.get(new_node) and new_node.tile_type != "BLOCK":
                                 queue.append(new_node)
 
                                 if new_node != end:
