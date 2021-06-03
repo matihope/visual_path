@@ -78,7 +78,7 @@ class Game:
         self.tile_size = GLOBALS['HEIGHT'] // size
         self.tiles = []
         self.size = size
-        self.path_algs = [self.bfs]
+        self.path_algs = [self.bfs, self.a_star]
         self.path_alg_indx = 0
         self.t = threading.Thread()
 
@@ -121,6 +121,10 @@ class Game:
         def change_path_finding_method(button, pressed):
             self.path_alg_indx += pressed[0] - pressed[1]
             self.path_alg_indx %= len(self.path_algs)
+            button.text = f'Method: {self.path_algs[self.path_alg_indx].__name__}'
+            if self.path_algs[self.path_alg_indx] == self.a_star:
+                GLOBALS['DIAGONALLY'] = True
+                print('Diagonal setting is ignored in order for A* to work properly')
         self.ui_elements.append(UI.Button(
             UI_START_X + UI_WIDTH // 2,
             GLOBALS['HEIGHT'] - 310,
@@ -283,7 +287,7 @@ class Game:
         for line in self.tiles:
             for tile in line:
                 tile.text = ''
-                if tile.tile_type == 'VISITED' or tile.tile_type == 'PATH':
+                if 'VISITED' in tile.tile_type or tile.tile_type == 'PATH':
                     tile.tile_type = ''
 
     def find_path(self):
@@ -308,6 +312,7 @@ class Game:
 
     def bfs(self, start, end):
         queue = [start]
+        visited = {start: True}
         distance = {start: 0}
         parent = {start: None}
         end_reached = False
@@ -324,11 +329,12 @@ class Game:
                     if node_x + x in range(self.size):
                         if node_y + y in range(self.size):
                             new_node = self.tiles[node_x + x][node_y + y]
-                            if new_node.tile_type == '' or new_node == end:
+                            if not visited.get(new_node):
                                 queue.append(new_node)
 
                                 if new_node != end:
                                     new_node.tile_type = 'VISITED'
+                                    visited[new_node] = True
                                 else:
                                     end_reached = True
 
@@ -338,14 +344,96 @@ class Game:
 
         def enter_and_mark(node):
             if parent.get(node):
-                if node.tile_type == 'VISITED':
-                    time.sleep(GLOBALS['PATH_DRAW_TIME']/distance[end])
+                time.sleep(GLOBALS['PATH_DRAW_TIME']/distance[end])
+                if 'VISITED' in node.tile_type:
                     node.tile_type = 'PATH'
-                    node.text = distance[node]
+                node.text = distance[node]
 
                 enter_and_mark(parent[node])
-        end.text = distance.get(end)
         enter_and_mark(end)
+
+    def a_star(self, start, end):
+        g_cost = {start: 0}  # distance from start node
+        h_cost = {end: 0}  # distance from end node
+        f_cost = {}  # sum of g_cost and h_cost
+        closed = {start: False}  # if node is done with its neighbors
+        parent = {start: None}
+        h = [start]  # priority queue
+        end_reached = False
+
+        # preprocess the g_cost for every node
+        queue = [end]
+        mini_visited = {}
+        while queue:
+            u = queue.pop(0)
+            node_x = u.x // u.size
+            node_y = u.y // u.size
+            mini_visited[u] = True
+            for x in range(-1, 2):
+                for y in range(-1, 2):
+                    if x != 0 or y != 0:
+                        if node_x + x in range(self.size):
+                            if node_y + y in range(self.size):
+                                new_node = self.tiles[node_x + x][node_y + y]
+                                if not mini_visited.get(new_node) and new_node not in queue:
+                                    queue.append(new_node)
+                                if abs(x) == abs(y):  # diagonal
+                                    if h_cost.get(new_node, -1) == -1 or \
+                                       h_cost[new_node] > h_cost[u] + 14:
+                                        h_cost[new_node] = h_cost[u] + 14
+                                else:
+                                    if h_cost.get(new_node, -1) == -1 or \
+                                       h_cost[new_node] > h_cost[u] + 10:
+                                        h_cost[new_node] = h_cost[u] + 10
+
+        while h and not end_reached:
+            node = h.pop(-1)
+            node_x = node.x // node.size
+            node_y = node.y // node.size
+            closed[node] = True
+            if node != start and node != end:
+                node.tile_type = 'VISITED'
+            for x in range(-1, 2):
+                for y in range(-1, 2):
+                    if x != 0 or y != 0:
+                        if node_x + x in range(self.size):
+                            if node_y + y in range(self.size):
+                                new_node = self.tiles[node_x + x][node_y + y]
+                                if not closed.get(new_node) and new_node.tile_type != 'BLOCK':
+                                    if new_node != end:
+                                        new_node.tile_type = 'VISITED_ALTERNATIVE'
+                                    if new_node == end:
+                                        end_reached = True
+                                    if abs(x) == abs(y):  # diagonal move
+                                        if g_cost.get(new_node, -1) == -1 or \
+                                           g_cost[new_node] > g_cost[node] + 14:
+                                            g_cost[new_node] = g_cost[node] + 14
+                                            parent[new_node] = node
+                                    else:  # vertical or horizontal move
+                                        if g_cost.get(new_node, -1) == -1 or \
+                                           g_cost[new_node] > g_cost[node] + 10:
+                                            g_cost[new_node] = g_cost[node] + 10
+                                            parent[new_node] = node
+                                    f_cost[new_node] = g_cost[new_node] + h_cost[new_node]
+                                    if new_node not in h:
+                                        h.append(new_node)
+                                        h.sort(key=lambda x: -f_cost[x])
+                                    time.sleep(GLOBALS['PAUSE_TIME'])
+
+        path_tiles = []
+
+        def draw_path(node):
+            if node == start:
+                return
+            path_tiles.append(node)
+            draw_path(parent[node])
+        draw_path(parent[end])
+
+        end.text = len(path_tiles) + 1
+        for i, tile in enumerate(path_tiles):
+            tile.tile_type = 'PATH'
+            tile.text = len(path_tiles) - i
+            time.sleep(GLOBALS['PATH_DRAW_TIME']/len(path_tiles))
 
 
 def main():
@@ -358,6 +446,7 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
                 GLOBALS['PAUSE_TIME'] = 0
+                GLOBALS['PATH_DRAW_TIME'] = 0
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:

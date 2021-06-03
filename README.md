@@ -14,9 +14,9 @@ A little python project to visualize path finding algorithms.
 
 # Implemented algoritms
  - [X] BFS
+ - [X] A* (A star)
  - [ ] Dijkstra
  - [ ] Greedy
- - [ ] A*(A star)
 
 # Button controls
 * LMB - Increment
@@ -29,3 +29,7 @@ All of the default variables are in **variables.json**
 * Path draw time - controls total time to draw the path
 * Grid size - controls the size of the grid in each dimension
 * Diagonal connections - controls whether algorithms will choose diagonal path
+  
+# TODO
+ * Modify bfs to use weights
+ * Delete the diagonal setting completly 
