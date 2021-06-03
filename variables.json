@@ -1,0 +1,39 @@
+{
+    "SAVE_AFTER_QUIT": false,
+    "WIDTH": 1200,
+    "HEIGHT": 800,
+    "FPS": 120,
+    "PAUSE_TIME": 0.005,
+    "PATH_DRAW_TIME": 3,
+    "DIAGONALLY": false,
+    "COLOR": "#ffffff",
+    "UI_FONT_COLOR": [255, 255, 255],
+    "BOARD_FONT_COLOR": [183, 105, 53],
+    "BACKGROUND_COLOR": [232, 237, 223],
+    "TILE_COLOR_TYPE_DEFAULT": [25, 130, 196],
+    "TILE_COLOR_TYPE_BLOCK": [255, 89, 94],
+    "TILE_COLOR_TYPE_TARGET": [138, 201, 38],
+    "TILE_COLOR_TYPE_VISITED": [168, 218, 220],
+    "TILE_COLOR_TYPE_PATH": [255, 202, 58],
+    "TILE_BORDER_COLOR": [51, 53, 51], 
+    "UI_BUTTON_COLORS": [
+        [53, 80, 112],
+        [109, 89, 122],
+        [181, 101, 118]
+    ],
+    "UI_START_SEARCH_BUTTON_COLORS": [
+        [87, 204, 153],
+        [128, 237, 153],
+        [199, 249, 204]
+    ],
+    "UI_RESET_SEARCH_BUTTON_COLORS": [
+        [255, 77, 109],
+        [255, 117, 143],
+        [255, 143, 163]
+    ],
+    "UI_METHOD_BUTTON_COLORS": [
+        [255, 183, 0],
+        [255, 208, 0],
+        [255, 234, 0]
+    ]
+}

@@ -1,5 +1,9 @@
 import pygame
 
+pygame.font.init()
+DEFAULT_FONT = pygame.font.SysFont('', 28)
+DEFAULT_FONT_COLOR = (255, 255, 255)
+
 
 class Label:
     def __init__(self, x, y, text, width=0, height=0, **kwargs):
@@ -8,9 +12,8 @@ class Label:
         self.width = width
         self.height = height
 
-        import path
-        self.font = kwargs.get('font', path.FONT)
-        self.font_color = kwargs.get('font_color', path.FONT_COLOR)
+        self.font = kwargs.get('font', DEFAULT_FONT)
+        self.font_color = kwargs.get('font_color', DEFAULT_FONT_COLOR)
 
         self._text = ''
         self.text_obj = None
@@ -53,6 +56,9 @@ class Button(Label):
         self.color = self.colors[0]
         self.action = action
         self.pressed_before = False
+        self.long_press = kwargs.get('long_press', False)
+        self.tick_time = kwargs.get('tick_time', 0.1) * 1000
+        self.tick_current = 0.0
 
     def check_collision(self, point: tuple[float, float]) -> bool:
         if point[0] < self.x:
@@ -72,12 +78,23 @@ class Button(Label):
         )
         surface.blit(self.text_obj, self.text_pos)
 
-    def update(self, keys, mouse):
+    def update(self, keys, mouse, dt):
         self.color = self.colors[0]
         if self.check_collision(mouse.get_pos()):
             self.color = self.colors[1]
-            if mouse.get_pressed()[0]:
+            pressed = mouse.get_pressed()
+
+            if any(pressed):
                 self.color = self.colors[2]
+
                 if not self.pressed_before:
-                    self.action(self)
-            self.pressed_before = mouse.get_pressed()[0]
+                    self.action(self, pressed)
+                if self.long_press:
+                    if self.tick_current >= self.tick_time:
+                        self.tick_current %= self.tick_time
+                        self.action(self, pressed)
+                    self.tick_current += dt
+            else:
+                self.tick_current = 0
+
+            self.pressed_before = any(pressed)
