@@ -3,8 +3,12 @@ import time
 import threading
 import ui_elements as UI
 import json
+import re
 
 pygame.init()
+
+with open('variables.json') as json_file:
+    GLOBALS = json.load(json_file)
 
 
 class Tile(UI.Label):
@@ -83,6 +87,13 @@ class Game:
         self.t = threading.Thread()
 
         self.ui_elements = []
+        self.board_button_manager = UI.BoardButtonManager(self)
+        self.boards_buttons = []
+        self.show_screen_index = 0
+        self.screen_elements = [
+            [self.ui_elements, self.tiles],  # main screen
+            [self.board_button_manager, self.boards_buttons],  # screen for choosing boards
+        ]
 
         # UI
         self.font = pygame.font.SysFont('', round(48 * GLOBALS['HEIGHT'] / 1000 * 20 / self.size))
@@ -118,7 +129,43 @@ class Game:
             anchor_y='top'
         ))
 
+        def save_board(button, pressed):
+            with open('boards/board1.pth', 'w') as board:
+                board.write(str(self.size) + '\n')
+                for line in self.tiles:
+                    for tile in line:
+                        if tile.tile_type == 'BLOCK' or tile.tile_type == 'TARGET':
+                            board.write(str(tile) + "\n")
+        self.ui_elements.append(UI.Button(
+            UI_START_X + UI_WIDTH // 2,
+            GLOBALS['HEIGHT'] - 430,
+            300,
+            50,
+            f'Save the board',
+            action=save_board,
+            font_color=(UI_FONT_COLOR),
+            anchor_x='center',
+            anchor_y='bottom'
+        ))
+
+        def choose_boards(button, pressed):
+            self.board_button_manager.load_boards()
+            self.show_screen_index = 1
+        self.ui_elements.append(UI.Button(
+            UI_START_X + UI_WIDTH // 2,
+            GLOBALS['HEIGHT'] - 370,
+            300,
+            50,
+            f'Choose a board',
+            action=choose_boards,
+            font_color=(UI_FONT_COLOR),
+            anchor_x='center',
+            anchor_y='bottom'
+        ))
+
         def change_path_finding_method(button, pressed):
+            if self.t.is_alive():
+                return
             self.path_alg_indx += pressed[0] - pressed[1]
             self.path_alg_indx %= len(self.path_algs)
             button.text = f'Method: {self.path_algs[self.path_alg_indx].__name__}'
@@ -239,21 +286,41 @@ class Game:
             anchor_y='bottom'
         ))
 
-    def draw(self, surface):
-        for line in self.tiles:
-            for tile in line:
-                tile.draw(surface)
+        # Board choose screen
+        def go_back(button, pressed):
+            self.show_screen_index = 0
+        self.boards_buttons.append(UI.Button(
+            GLOBALS['WIDTH']//2 - 20,
+            GLOBALS['HEIGHT']-25,
+            200,
+            50,
+            'Back',
+            action=go_back,
+            anchor_x='right',
+            anchor_y='bottom'
+        ))
 
-        for el in self.ui_elements:
-            el.draw(surface)
+    def draw(self, surface):
+        def perform_draw(item):
+            if type(item) == list:
+                for el in item:
+                    perform_draw(el)
+            else:
+                item.draw(surface)
+
+        for item in self.screen_elements[self.show_screen_index]:
+            perform_draw(item)
 
     def update(self, keys, mouse, dt):
-        for line in self.tiles:
-            for tile in line:
-                tile.update(keys, mouse, dt)
+        def perform_update(item):
+            if type(item) == list:
+                for el in item:
+                    perform_update(el)
+            else:
+                item.update(keys, mouse, dt)
 
-        for el in self.ui_elements:
-            el.update(keys, mouse, dt)
+        for item in self.screen_elements[self.show_screen_index]:
+            perform_update(item)
 
     @property
     def size(self) -> int:
@@ -267,7 +334,7 @@ class Game:
         self.generate()
 
     def generate(self):
-        self.tiles = []
+        self.tiles.clear()
         for x in range(self.size):
             line = []
             for y in range(self.size):
@@ -289,6 +356,15 @@ class Game:
                 tile.text = ''
                 if 'VISITED' in tile.tile_type or tile.tile_type == 'PATH':
                     tile.tile_type = ''
+
+    def load_board(self, board_name):
+        with open(f'boards/{board_name}.pth', 'r') as board:
+            content = board.readlines()
+            self.size = int(content.pop(0))
+            p = re.compile(r'Tile\((?P<x>[0-9]+), (?P<y>[0-9]+), (?P<tile_type>[A-Z]+)\)')
+            for tile in content:
+                m = p.match(tile)
+                self.tiles[int(m.group('x'))][int(m.group('y'))].tile_type = m.group('tile_type')
 
     def find_path(self):
         if self.t.is_alive():
@@ -340,7 +416,7 @@ class Game:
 
                                 distance[new_node] = distance[u] + 1
                                 parent[new_node] = u
-                            time.sleep(GLOBALS['PAUSE_TIME'])
+                                time.sleep(GLOBALS['PAUSE_TIME'])
 
         def enter_and_mark(node):
             if parent.get(node):
@@ -400,6 +476,7 @@ class Game:
                             if node_y + y in range(self.size):
                                 new_node = self.tiles[node_x + x][node_y + y]
                                 if not closed.get(new_node) and new_node.tile_type != 'BLOCK':
+                                    time.sleep(GLOBALS['PAUSE_TIME'])
                                     if new_node != end:
                                         new_node.tile_type = 'VISITED_ALTERNATIVE'
                                     if new_node == end:
@@ -418,7 +495,6 @@ class Game:
                                     if new_node not in h:
                                         h.append(new_node)
                                         h.sort(key=lambda x: -f_cost[x])
-                                    time.sleep(GLOBALS['PAUSE_TIME'])
 
         path_tiles = []
 
@@ -427,9 +503,15 @@ class Game:
                 return
             path_tiles.append(node)
             draw_path(parent[node])
-        draw_path(parent[end])
 
-        end.text = len(path_tiles) + 1
+        if parent.get(end):
+            # path extists
+            draw_path(parent[end])
+            end.text = len(path_tiles) + 1
+        else:
+            # path doesn't exist
+            end.text = "-1"
+
         for i, tile in enumerate(path_tiles):
             tile.tile_type = 'PATH'
             tile.text = len(path_tiles) - i
@@ -461,9 +543,8 @@ def main():
 
 
 if __name__ == "__main__":
-    with open('variables.json') as json_file:
-        GLOBALS = json.load(json_file)
-
+    GLOBALS['WIDTH'] = int(GLOBALS['WIDTH'] * GLOBALS['WINDOW_SCALE'])
+    GLOBALS['HEIGHT'] = int(GLOBALS['HEIGHT'] * GLOBALS['WINDOW_SCALE'])
     UI_START_X = GLOBALS['HEIGHT']
     UI_START_Y = 0
     UI_WIDTH = GLOBALS['WIDTH'] - GLOBALS['HEIGHT']

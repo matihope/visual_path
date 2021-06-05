@@ -1,4 +1,6 @@
 import pygame
+import re
+import os
 
 pygame.font.init()
 DEFAULT_FONT = pygame.font.SysFont('', 28)
@@ -42,12 +44,12 @@ class Button(Label):
         elif anchor_x == 'center':
             x -= width // 2
         elif anchor_x == 'right':
-            x += width
+            x -= width
 
         if anchor_y == 'top':
             pass
         elif anchor_y == 'center':
-            y += height // 2
+            y -= height // 2
         elif anchor_y == 'bottom':
             y -= height
 
@@ -56,6 +58,7 @@ class Button(Label):
         self.color = self.colors[0]
         self.action = action
         self.pressed_before = False
+        self.pressed_before_buttons: tuple[bool, bool, bool]
         self.long_press = kwargs.get('long_press', False)
         self.tick_time = kwargs.get('tick_time', 0.1) * 1000
         self.tick_current = 0.0
@@ -87,14 +90,116 @@ class Button(Label):
             if any(pressed):
                 self.color = self.colors[2]
 
-                if not self.pressed_before:
-                    self.action(self, pressed)
                 if self.long_press:
+                    if not self.pressed_before:
+                        self.action(self, pressed)
                     if self.tick_current >= self.tick_time:
                         self.tick_current %= self.tick_time
                         self.action(self, pressed)
                     self.tick_current += dt
             else:
+                if not self.long_press:
+                    if self.pressed_before:
+                        self.action(self, self.pressed_before_buttons)
+
                 self.tick_current = 0
 
             self.pressed_before = any(pressed)
+            self.pressed_before_buttons = pressed
+
+
+class BoardButtonManager:
+    def __init__(self, game, board_size_px=200):
+        self.boards = []
+        self.board_size_px = board_size_px
+        self.game = game
+        self.load_boards()
+
+    def load_board(self, board_name):
+        import path
+        with open(f'boards/{board_name}.pth', 'r') as board:
+            content = board.readlines()
+            size = int(content.pop(0))
+
+            # generate tiles
+            tile_size = self.board_size_px // size
+            tiles = []
+            for x in range(size):
+                line = []
+                for y in range(size):
+                    tile = path.Tile(x * tile_size, y * tile_size, tile_size)
+                    line.append(tile)
+                tiles.append(line)
+
+            # read tiles from file
+            p = re.compile(r'Tile\((?P<x>[0-9]+), (?P<y>[0-9]+), (?P<tile_type>[A-Z]+)\)')
+            for tile in content:
+                m = p.match(tile)
+                tiles[int(m.group('x'))][int(m.group('y'))].tile_type = m.group('tile_type')
+        return size, tiles
+
+    def load_boards(self):
+        self.boards.clear()
+
+        def load_board(button, pressed):
+            self.game.load_board(button.filename)
+            self.game.show_screen_index = 0
+
+        # check for files
+        files = []
+        for file in os.listdir('boards'):
+            name, extension = file.split('.')
+            if extension == 'pth':
+                files.append(name)
+        default_index = files.index('default_board')
+        if default_index != -1:
+            files.insert(0, files.pop(default_index))
+
+        for index, b in enumerate(files):
+            size, tiles = self.load_board(b)
+            self.boards.append(
+                BoardPreview(
+                    50 + (25 + self.board_size_px) * index, 50,
+                    self.board_size_px,
+                    b,
+                    action=load_board,
+                    elements=tiles
+                )
+            )
+
+    def draw(self, surface):
+        def perform_draw(item):
+            if type(item) == list:
+                for el in item:
+                    perform_draw(el)
+            else:
+                item.draw(surface)
+
+        for item in self.boards:
+            perform_draw(item)
+
+    def update(self, keys, mouse, dt):
+        def perform_update(item):
+            if type(item) == list:
+                for el in item:
+                    perform_update(el)
+            else:
+                item.update(keys, mouse, dt)
+
+        for item in self.boards:
+            perform_update(item)
+
+
+class BoardPreview(Button):
+    def __init__(self, x, y, size, filename, action, elements):
+        super().__init__(x, y, width=size, height=size, text=filename, action=action, anchor_x='left', anchor_y='top',
+                         font=pygame.font.SysFont('', 36))
+        self.filename = filename
+        self.cached_view = pygame.Surface((size, size))
+        for line in elements:
+            for el in line:
+                el.draw(self.cached_view)
+
+    def draw(self, surface):
+        surface.blit(self.cached_view, (self.x, self.y))
+        surface.blit(self.text_obj, self.text_pos)
