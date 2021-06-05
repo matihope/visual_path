@@ -4,6 +4,7 @@
     "HEIGHT": 800,
     "WINDOW_SCALE": 1.0,
     "FPS": 120,
+    "BOARDS_FOLDER": "boards",
     "PAUSE_TIME": 0.005,
     "PATH_DRAW_TIME": 3,
     "DIAGONALLY": true,

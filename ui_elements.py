@@ -135,15 +135,16 @@ class Button(Label):
 
 
 class BoardButtonManager:
-    def __init__(self, game, board_size_px=200):
+    def __init__(self, game, boards_folder, board_size_px=200):
         self.boards = []
         self.board_size_px = board_size_px
         self.game = game
+        self.boards_folder = boards_folder
         self.load_boards()
 
     def load_board(self, board_name):
         import path
-        with open(f'boards/{board_name}.pth', 'r') as board:
+        with open(f'{self.boards_folder}/{board_name}.pth', 'r') as board:
             content = board.readlines()
             size = int(content.pop(0))
 
@@ -176,7 +177,7 @@ class BoardButtonManager:
 
         # check for files
         files = []
-        for file in os.listdir('boards'):
+        for file in os.listdir(self.boards_folder):
             name, extension = file.split('.')
             if extension == 'pth':
                 files.append(name)

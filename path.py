@@ -88,7 +88,7 @@ class Game:
         self.t = threading.Thread()
 
         self.ui_elements = []
-        self.board_button_manager = UI.BoardButtonManager(self)
+        self.board_button_manager = UI.BoardButtonManager(self, GLOBALS['BOARDS_FOLDER'])
         self.boards_buttons = []
         self.show_screen_index = 0
         self.screen_elements = [
