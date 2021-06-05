@@ -37,7 +37,8 @@ class Tile(UI.Label):
             self.color = GLOBALS[f'TILE_COLOR_TYPE_{value}']
 
     def draw(self, surface):
-        pygame.draw.rect(surface, GLOBALS['TILE_BORDER_COLOR'], (self.x, self.y, self.size, self.size))
+        pygame.draw.rect(
+            surface, GLOBALS['TILE_BORDER_COLOR'], (self.x, self.y, self.size, self.size))
         pygame.draw.rect(
             surface,
             self.color, (
@@ -56,7 +57,7 @@ class Tile(UI.Label):
         )
         return rounded_point == (self.x, self.y)
 
-    def update(self, keys, mouse, dt) -> None:
+    def update(self, keys, mouse, dt, events) -> None:
         if mouse.get_pressed()[0]:
             if self.check_collision(mouse.get_pos()):
                 self.tile_type = 'BLOCK'
@@ -92,11 +93,13 @@ class Game:
         self.show_screen_index = 0
         self.screen_elements = [
             [self.ui_elements, self.tiles],  # main screen
-            [self.board_button_manager, self.boards_buttons],  # screen for choosing boards
+            # screen for choosing boards
+            [self.board_button_manager, self.boards_buttons],
         ]
 
         # UI
-        self.font = pygame.font.SysFont('', round(48 * GLOBALS['HEIGHT'] / 1000 * 20 / self.size))
+        self.font = pygame.font.SysFont(
+            '', round(48 * GLOBALS['HEIGHT'] / 1000 * 20 / self.size))
         UI_FONT_COLOR = GLOBALS['UI_FONT_COLOR']
 
         def start_search(button, pressed):
@@ -129,13 +132,22 @@ class Game:
             anchor_y='top'
         ))
 
+        self.board_name_input = UI.TextInput(
+            UI_START_X + UI_WIDTH // 2,
+            GLOBALS['HEIGHT'] - 490,
+            300,
+            50,
+            placeholder='Board name...',
+            anchor_x='center',
+            anchor_y='bottom'
+        )
+        self.ui_elements.append(self.board_name_input)
+
         def save_board(button, pressed):
-            with open('boards/board1.pth', 'w') as board:
-                board.write(str(self.size) + '\n')
-                for line in self.tiles:
-                    for tile in line:
-                        if tile.tile_type == 'BLOCK' or tile.tile_type == 'TARGET':
-                            board.write(str(tile) + "\n")
+            if filename := self.board_name_input.current_text:
+                self.save_board(filename)
+            else:
+                print('You have to input a board name in the input box in order to save!')
         self.ui_elements.append(UI.Button(
             UI_START_X + UI_WIDTH // 2,
             GLOBALS['HEIGHT'] - 430,
@@ -296,7 +308,7 @@ class Game:
             50,
             'Back',
             action=go_back,
-            anchor_x='right',
+            anchor_x='center',
             anchor_y='bottom'
         ))
 
@@ -311,13 +323,13 @@ class Game:
         for item in self.screen_elements[self.show_screen_index]:
             perform_draw(item)
 
-    def update(self, keys, mouse, dt):
+    def update(self, keys, mouse, dt, events):
         def perform_update(item):
             if type(item) == list:
                 for el in item:
                     perform_update(el)
             else:
-                item.update(keys, mouse, dt)
+                item.update(keys, mouse, dt, events)
 
         for item in self.screen_elements[self.show_screen_index]:
             perform_update(item)
@@ -329,7 +341,8 @@ class Game:
     @size.setter
     def size(self, value: int) -> None:
         self._size = value
-        self.font = pygame.font.SysFont('', round(48 * GLOBALS['HEIGHT'] / 1000 * 20 / self.size))
+        self.font = pygame.font.SysFont(
+            '', round(48 * GLOBALS['HEIGHT'] / 1000 * 20 / self.size))
         self.tile_size = GLOBALS['HEIGHT'] // self._size
         self.generate()
 
@@ -361,10 +374,20 @@ class Game:
         with open(f'boards/{board_name}.pth', 'r') as board:
             content = board.readlines()
             self.size = int(content.pop(0))
-            p = re.compile(r'Tile\((?P<x>[0-9]+), (?P<y>[0-9]+), (?P<tile_type>[A-Z]+)\)')
+            p = re.compile(
+                r'Tile\((?P<x>[0-9]+), (?P<y>[0-9]+), (?P<tile_type>[A-Z]+)\)')
             for tile in content:
                 m = p.match(tile)
-                self.tiles[int(m.group('x'))][int(m.group('y'))].tile_type = m.group('tile_type')
+                self.tiles[int(m.group('x'))][int(m.group('y'))
+                                              ].tile_type = m.group('tile_type')
+
+    def save_board(self, filename):
+        with open(f'boards/{filename}.pth', 'w') as board:
+            board.write(str(self.size) + '\n')
+            for line in self.tiles:
+                for tile in line:
+                    if tile.tile_type == 'BLOCK' or tile.tile_type == 'TARGET':
+                        board.write(str(tile) + "\n")
 
     def find_path(self):
         if self.t.is_alive():
@@ -491,7 +514,8 @@ class Game:
                                            g_cost[new_node] > g_cost[node] + 10:
                                             g_cost[new_node] = g_cost[node] + 10
                                             parent[new_node] = node
-                                    f_cost[new_node] = g_cost[new_node] + h_cost[new_node]
+                                    f_cost[new_node] = g_cost[new_node] + \
+                                        h_cost[new_node]
                                     if new_node not in h:
                                         h.append(new_node)
                                         h.sort(key=lambda x: -f_cost[x])
@@ -524,7 +548,8 @@ def main():
     game1 = Game(20)
     while run:
         dt = clock.tick(GLOBALS['FPS'])
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        for event in events:
             if event.type == pygame.QUIT:
                 run = False
                 GLOBALS['PAUSE_TIME'] = 0
@@ -537,7 +562,7 @@ def main():
                     game1.reset()
 
         win.fill(GLOBALS['BACKGROUND_COLOR'])
-        game1.update(pygame.key.get_pressed(), pygame.mouse, dt)
+        game1.update(pygame.key.get_pressed(), pygame.mouse, dt, events)
         game1.draw(win)
         pygame.display.flip()
 
@@ -551,5 +576,5 @@ if __name__ == "__main__":
     UI_HEIGHT = GLOBALS['HEIGHT']
 
     win = pygame.display.set_mode((GLOBALS['WIDTH'], GLOBALS['HEIGHT']))
-    pygame.display.set_caption("Visual Path V0.1")
+    pygame.display.set_caption("Visual Path V0.2")
     main()
