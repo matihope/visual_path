@@ -465,6 +465,11 @@ class Game:
                                 parent[new_node] = u
                                 time.sleep(GLOBALS['PAUSE_TIME'])
 
+        if dist := distance[end]:
+            print(f'End length: {dist}')
+        else:
+            print('Path doesn\'t exist')
+
         def enter_and_mark(node):
             if parent.get(node):
                 time.sleep(GLOBALS['PATH_DRAW_TIME']/distance[end])
@@ -474,6 +479,7 @@ class Game:
 
                 enter_and_mark(parent[node])
         enter_and_mark(end)
+
 
     def a_star(self, start, end):
         g_cost = {start: 0}  # distance from start node
@@ -485,6 +491,7 @@ class Game:
         end_reached = False
 
         # preprocess the g_cost for every node
+        # super inefficient, please contribute :DD
         queue = [end]
         mini_visited = {}
         while queue:
@@ -513,8 +520,7 @@ class Game:
             node = h.pop(-1)
             node_x = node.x // node.size
             node_y = node.y // node.size
-            closed[node] = True
-            if node != start and node != end:
+            if node is not start and node is not end:
                 node.tile_type = 'VISITED'
             for x in range(-1, 2):
                 for y in range(-1, 2):
@@ -524,9 +530,9 @@ class Game:
                                 new_node = self.tiles[node_x + x][node_y + y]
                                 if not closed.get(new_node) and new_node.tile_type != 'BLOCK':
                                     time.sleep(GLOBALS['PAUSE_TIME'])
-                                    if new_node != end:
+                                    if new_node is not start and new_node is not end:
                                         new_node.tile_type = 'VISITED_ALTERNATIVE'
-                                    if new_node == end:
+                                    if new_node is end:
                                         end_reached = True
                                     if abs(x) == abs(y):  # diagonal move
                                         if g_cost.get(new_node, -1) == -1 or \
@@ -538,9 +544,9 @@ class Game:
                                            g_cost[new_node] > g_cost[node] + 10:
                                             g_cost[new_node] = g_cost[node] + 10
                                             parent[new_node] = node
-                                    f_cost[new_node] = g_cost[new_node] + \
-                                        h_cost[new_node]
-                                    if new_node not in h:
+                                    f_cost[new_node] = g_cost[new_node] + h_cost[new_node]
+                                    if not closed.get(new_node):
+                                        closed[new_node] = True
                                         h.append(new_node)
                                         h.sort(key=lambda x: -f_cost[x])
 
@@ -555,9 +561,11 @@ class Game:
         if parent.get(end):
             # path extists
             draw_path(parent[end])
+            print(f'End length: {len(path_tiles) + 1}')
             end.text = len(path_tiles) + 1
         else:
             # path doesn't exist
+            print("Path doesn\'t exist")
             end.text = "-1"
 
         for i, tile in enumerate(path_tiles):
