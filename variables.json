@@ -5,6 +5,7 @@
     "WINDOW_SCALE": 1.0,
     "FPS": 120,
     "BOARDS_FOLDER": "boards",
+    "LOAD_DEAFULT_BOARD_ON_STARTUP": true,
     "PAUSE_TIME": 0.005,
     "PATH_DRAW_TIME": 3,
     "DIAGONALLY": true,

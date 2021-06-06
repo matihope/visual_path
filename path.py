@@ -302,15 +302,38 @@ class Game:
         def go_back(button, pressed):
             self.show_screen_index = 0
         self.boards_buttons.append(UI.Button(
-            GLOBALS['WIDTH']//2 - 20,
+            GLOBALS['WIDTH']//2 - 10,
             GLOBALS['HEIGHT']-25,
             200,
             50,
             'Back',
             action=go_back,
-            anchor_x='center',
+            anchor_x='right',
             anchor_y='bottom'
         ))
+
+        def create_new_board(button, pressed):
+            self.show_screen_index = 0
+            self.board_name_input.current_text = ''
+            self.size = size
+            self.reset()
+        self.boards_buttons.append(UI.Button(
+            GLOBALS['WIDTH']//2 + 10,
+            GLOBALS['HEIGHT']-25,
+            200,
+            50,
+            'New board',
+            action=create_new_board,
+            anchor_x='left',
+            anchor_y='bottom'
+        ))
+
+        # finally, load the default board to the screen
+        if GLOBALS['LOAD_DEAFULT_BOARD_ON_STARTUP']:
+            try:
+                self.load_board('default_board')
+            except ValueError as e:
+                print("There is no default board!")
 
     def draw(self, surface):
         def perform_draw(item):
@@ -371,6 +394,7 @@ class Game:
                     tile.tile_type = ''
 
     def load_board(self, board_name):
+        self.board_name_input.current_text = board_name
         with open(f'boards/{board_name}.pth', 'r') as board:
             content = board.readlines()
             self.size = int(content.pop(0))

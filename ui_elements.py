@@ -172,7 +172,6 @@ class BoardButtonManager:
 
         def load_board(button, pressed):
             self.game.load_board(button.filename)
-            self.game.board_name_input.current_text = button.filename
             self.game.show_screen_index = 0
 
         # check for files
@@ -181,9 +180,11 @@ class BoardButtonManager:
             name, extension = file.split('.')
             if extension == 'pth':
                 files.append(name)
-        default_index = files.index('default_board')
-        if default_index != -1:
-            files.insert(0, files.pop(default_index))
+        try:
+            # move the default board to the front of the list
+            files.insert(0, files.pop(files.index('default_board')))
+        except ValueError as e:
+            print("There is no default_board in the folder!")
 
         for index, b in enumerate(files):
             size, tiles = self.load_board(b)
