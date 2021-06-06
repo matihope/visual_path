@@ -186,11 +186,12 @@ class BoardButtonManager:
         except ValueError as e:
             print("There is no default_board in the folder!")
 
+        board_spacing = self.board_size_px + 25
         for index, b in enumerate(files):
             size, tiles = self.load_board(b)
             self.boards.append(
                 BoardPreview(
-                    50 + (25 + self.board_size_px) * index, 50,
+                    50 + board_spacing * (index % 5), 50 + board_spacing * (index // 5),
                     self.board_size_px,
                     b,
                     action=load_board,

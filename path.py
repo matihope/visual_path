@@ -17,7 +17,7 @@ class Tile(UI.Label):
         self.width = size
         self.height = size
         self.size = size
-        self.size_buffer = 1
+        self.size_buffer = 0.1
         self.color = (75, 75, 75)
 
         self._tile_type = ''
