@@ -6,6 +6,7 @@ import string
 pygame.font.init()
 
 DEFAULT_FONT = pygame.font.SysFont('', 28)
+DEFAULT_MINI_FONT = pygame.font.SysFont('', 14)
 DEFAULT_MONOSPACE_FONT = pygame.font.SysFont('monospace', 22, True)
 DEFAULT_FONT_COLOR = (255, 255, 255)
 

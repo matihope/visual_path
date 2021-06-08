@@ -1,0 +1,9 @@
+8
+Tile(2, 2, TARGET)
+Tile(2, 4, BLOCK)
+Tile(3, 4, BLOCK)
+Tile(4, 4, BLOCK)
+Tile(5, 4, BLOCK)
+Tile(5, 5, TARGET)
+Tile(6, 4, BLOCK)
+Tile(6, 5, BLOCK)

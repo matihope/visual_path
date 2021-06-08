@@ -87,6 +87,8 @@ class Game:
         self.path_alg_indx = 0
         self.t = threading.Thread()
 
+        self.wait_for_keypress = GLOBALS['WAIT_FOR_KEYPRESS']
+        self.skip_waiting = False
         self.ui_elements = []
         self.board_button_manager = UI.BoardButtonManager(self, GLOBALS['BOARDS_FOLDER'])
         self.boards_buttons = []
@@ -134,7 +136,7 @@ class Game:
 
         self.board_name_input = UI.TextInput(
             UI_START_X + UI_WIDTH // 2,
-            GLOBALS['HEIGHT'] - 490,
+            GLOBALS['HEIGHT'] - 550,
             300,
             50,
             placeholder='Board name...',
@@ -150,7 +152,7 @@ class Game:
                 print('You have to input a board name in the input box in order to save!')
         self.ui_elements.append(UI.Button(
             UI_START_X + UI_WIDTH // 2,
-            GLOBALS['HEIGHT'] - 430,
+            GLOBALS['HEIGHT'] - 490,
             300,
             50,
             f'Save the board',
@@ -165,7 +167,7 @@ class Game:
             self.show_screen_index = 1
         self.ui_elements.append(UI.Button(
             UI_START_X + UI_WIDTH // 2,
-            GLOBALS['HEIGHT'] - 370,
+            GLOBALS['HEIGHT'] - 430,
             300,
             50,
             f'Choose a board',
@@ -186,13 +188,31 @@ class Game:
                 print('Diagonal setting is ignored in order for A* to work properly')
         self.ui_elements.append(UI.Button(
             UI_START_X + UI_WIDTH // 2,
-            GLOBALS['HEIGHT'] - 310,
+            GLOBALS['HEIGHT'] - 370,
             300,
             50,
             f'Method: {self.path_algs[self.path_alg_indx].__name__}',
             action=change_path_finding_method,
             font_color=(UI_FONT_COLOR),
             colors=GLOBALS['UI_METHOD_BUTTON_COLORS'],
+            anchor_x='center',
+            anchor_y='bottom'
+        ))
+
+        def change_wait_for_click(button, pressed):
+            self.skip_waiting = GLOBALS['WAIT_FOR_KEYPRESS']
+            GLOBALS['WAIT_FOR_KEYPRESS'] = not GLOBALS['WAIT_FOR_KEYPRESS']
+            self.wait_for_keypress = GLOBALS['WAIT_FOR_KEYPRESS']
+            button.text = f'Wait for press(N): {GLOBALS["WAIT_FOR_KEYPRESS"]}'
+        self.ui_elements.append(UI.Button(
+            UI_START_X + UI_WIDTH // 2,
+            GLOBALS['HEIGHT'] - 310,
+            300,
+            50,
+            f'Wait for press(N): {GLOBALS["WAIT_FOR_KEYPRESS"]}',
+            action=change_wait_for_click,
+            font_color=(UI_FONT_COLOR),
+            colors=GLOBALS['UI_BUTTON_COLORS'],
             anchor_x='center',
             anchor_y='bottom'
         ))
@@ -364,6 +384,8 @@ class Game:
     @size.setter
     def size(self, value: int) -> None:
         self._size = value
+        self.mini_font = pygame.font.SysFont(
+            '', round(12 * GLOBALS['HEIGHT'] / 1000 * 20 / self.size))
         self.font = pygame.font.SysFont(
             '', round(48 * GLOBALS['HEIGHT'] / 1000 * 20 / self.size))
         self.tile_size = GLOBALS['HEIGHT'] // self._size
@@ -385,6 +407,7 @@ class Game:
 
     def reset(self):
         if self.t.is_alive():
+            self.skip_waiting = True
             return
 
         for line in self.tiles:
@@ -427,6 +450,7 @@ class Game:
             print('Make sure, amount of TARGET-type blocks == 2')
             return
 
+        self.skip_waiting = False
         start, end = t_blocks
         print(f'Seaching path from: {start} to {end}...')
         self.t = threading.Thread(target=self.path_algs[self.path_alg_indx],
@@ -464,6 +488,10 @@ class Game:
                                 distance[new_node] = distance[u] + 1
                                 parent[new_node] = u
                                 time.sleep(GLOBALS['PAUSE_TIME'])
+                                if GLOBALS['WAIT_FOR_KEYPRESS']:
+                                    while self.wait_for_keypress and not self.skip_waiting:
+                                        continue
+                                    self.wait_for_keypress = True
 
         if dist := distance[end]:
             print(f'End length: {dist}')
@@ -479,7 +507,6 @@ class Game:
 
                 enter_and_mark(parent[node])
         enter_and_mark(end)
-
 
     def a_star(self, start, end):
         g_cost = {start: 0}  # distance from start node
@@ -528,10 +555,10 @@ class Game:
                         if node_x + x in range(self.size):
                             if node_y + y in range(self.size):
                                 new_node = self.tiles[node_x + x][node_y + y]
-                                if not closed.get(new_node) and new_node.tile_type != 'BLOCK':
-                                    time.sleep(GLOBALS['PAUSE_TIME'])
-                                    if new_node is not start and new_node is not end:
+                                if new_node.tile_type != 'BLOCK':
+                                    if not closed.get(new_node) and new_node is not start and new_node is not end:
                                         new_node.tile_type = 'VISITED_ALTERNATIVE'
+                                        time.sleep(GLOBALS['PAUSE_TIME'])
                                     if new_node is end:
                                         end_reached = True
                                     if abs(x) == abs(y):  # diagonal move
@@ -545,10 +572,18 @@ class Game:
                                             g_cost[new_node] = g_cost[node] + 10
                                             parent[new_node] = node
                                     f_cost[new_node] = g_cost[new_node] + h_cost[new_node]
+                                    if GLOBALS['SHOW_ASTAR_VALUES']:
+                                        new_node.font = self.mini_font
+                                        new_node.text = f'{g_cost[new_node]} | {h_cost[new_node]} | {f_cost[new_node]}'
                                     if not closed.get(new_node):
                                         closed[new_node] = True
                                         h.append(new_node)
                                         h.sort(key=lambda x: -f_cost[x])
+
+            if GLOBALS['WAIT_FOR_KEYPRESS']:
+                while self.wait_for_keypress and not self.skip_waiting:
+                    continue
+                self.wait_for_keypress = True
 
         path_tiles = []
 
@@ -570,7 +605,8 @@ class Game:
 
         for i, tile in enumerate(path_tiles):
             tile.tile_type = 'PATH'
-            tile.text = len(path_tiles) - i
+            if not GLOBALS['SHOW_ASTAR_VALUES']:
+                tile.text = len(path_tiles) - i
             time.sleep(GLOBALS['PATH_DRAW_TIME']/len(path_tiles))
 
 
@@ -584,6 +620,7 @@ def main():
         for event in events:
             if event.type == pygame.QUIT:
                 run = False
+                game1.skip_waiting = True
                 GLOBALS['PAUSE_TIME'] = 0
                 GLOBALS['PATH_DRAW_TIME'] = 0
 
@@ -592,6 +629,9 @@ def main():
                     game1.find_path()
                 if event.key == pygame.K_r:
                     game1.reset()
+
+                if event.key == pygame.K_n:
+                    game1.wait_for_keypress = False
 
         win.fill(GLOBALS['BACKGROUND_COLOR'])
         game1.update(pygame.key.get_pressed(), pygame.mouse, dt, events)

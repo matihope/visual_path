@@ -8,6 +8,8 @@
     "LOAD_DEAFULT_BOARD_ON_STARTUP": true,
     "PAUSE_TIME": 0.005,
     "PATH_DRAW_TIME": 3,
+    "WAIT_FOR_KEYPRESS": false,
+    "SHOW_ASTAR_VALUES": false,
     "DIAGONALLY": true,
     "UI_FONT_COLOR": [255, 255, 255],
     "BOARD_FONT_COLOR": [183, 105, 53],
